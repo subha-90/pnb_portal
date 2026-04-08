@@ -1,0 +1,87 @@
+:root {
+  --primary-pnb: #A01E35; /* Figma PNB Maroon */
+  --secondary-pnb: #FFCC00;
+  --action-blue: #156DC4;
+  --bg-app: #F8F9FA; /* Figma Light Grey Body */
+  --text-heading: #1A1A1A;
+  --text-body: #4D4D4D;
+  --text-secondary: #808080;
+  --border-subtle: #E6E6E6;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --sidebar-w: 260px;
+  --header-h: 60px;
+  --elevation-1: 0 1px 3px rgba(0,0,0,0.05);
+  --elevation-2: 0 4px 6px rgba(0,0,0,0.07);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+[data-theme='dark'] {
+  --bg-color: #121212;
+  --card-bg: rgba(30, 30, 30, 0.8);
+  --text-primary: #e9ecef;
+  --text-secondary: #adb5bd;
+  --sidebar-bg: #1e1e1e;
+  --border-color: #343a40;
+  --glass-bg: rgba(30, 30, 30, 0.4);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+}
+
+.premium-button {
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2);
+}
+
+.premium-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(128, 0, 0, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
