@@ -180,9 +180,11 @@ export const apiService = {
     return apiAuth.post('/pnb/merchant/qr_convert_to_base64', { RequestData: encrypted });
   },
 
+  /*
   // Dynamic QR String Generation
   generateDynamicQrString: (params: any) =>
     apiCBOI.post('/CBOI/merchant/get-qr-string', params),
+  */
 
   // ─── Help & Support APIs ───────────────────────────────────────────────────
   createTicket: async (data: any) => {

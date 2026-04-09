@@ -16,9 +16,10 @@ const QRCodePage: React.FC = () => {
       </div>
     );
   }
-  const [qrType, setQrType] = useState<'Static' | 'Dynamic'>('Static');
+  const [qrType] = useState<'Static' | 'Dynamic'>('Static');
   const [amount, setAmount] = useState('');
-  const [isDynamicGenerated, setIsDynamicGenerated] = useState(false);
+  // const [isDynamicGenerated, setIsDynamicGenerated] = useState(false);
+  const isDynamicGenerated = false;
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
@@ -27,7 +28,7 @@ const QRCodePage: React.FC = () => {
   const [upiId, setUpiId] = useState('');
   const [merchantName, setMerchantName] = useState('MERCHANT');
   const [staticQrString, setStaticQrString] = useState('');
-  const [dynamicQrString, setDynamicQrString] = useState<string | null>(null);
+  // const [dynamicQrString, setDynamicQrString] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedVpa) {
@@ -41,9 +42,12 @@ const QRCodePage: React.FC = () => {
   useEffect(() => {
     if (!staticQrString) return;
 
+    const qrString = staticQrString;
+    /* 
     const qrString = qrType === 'Dynamic' && isDynamicGenerated && dynamicQrString
       ? dynamicQrString
       : staticQrString;
+    */
 
     const fetchQR = async () => {
       try {
@@ -56,8 +60,9 @@ const QRCodePage: React.FC = () => {
       }
     };
     fetchQR();
-  }, [staticQrString, isDynamicGenerated, dynamicQrString]);
+  }, [staticQrString, isDynamicGenerated]);
 
+  /*
   const handleGenerateDynamic = async () => {
     if (!amount || !selectedVpa) return;
     setLoading(true);
@@ -83,6 +88,7 @@ const QRCodePage: React.FC = () => {
       setLoading(false);
     }
   };
+  */
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', backgroundColor: '#f8f9fa', overflowY: 'auto' }}>
@@ -93,7 +99,7 @@ const QRCodePage: React.FC = () => {
           QR Details
         </h1>
 
-        {/* Filter Card */}
+        {/* Filter Card
         <div style={{ backgroundColor: 'white', padding: '16px 24px', borderRadius: '8px', border: '1px solid #eee' }}>
           <p style={{ margin: '0 0 16px 0', fontSize: '12px', fontWeight: '600', color: '#666' }}>
             Select The Type of QR
@@ -105,8 +111,8 @@ const QRCodePage: React.FC = () => {
                 key={type} 
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#333', fontWeight: '500' }}
                 onClick={() => {
-                  setQrType(type as any);
-                  if (type === 'Static') setIsDynamicGenerated(false);
+                  // setQrType(type as any);
+                  // if (type === 'Static') setIsDynamicGenerated(false);
                 }}
               >
                 <div style={{ 
@@ -142,7 +148,7 @@ const QRCodePage: React.FC = () => {
                     }} 
                   />
                   <button 
-                    onClick={handleGenerateDynamic}
+                    // onClick={handleGenerateDynamic}
                     disabled={loading}
                     style={{
                       backgroundColor: '#A01E35', color: 'white', border: 'none', borderRadius: '4px',
@@ -163,6 +169,7 @@ const QRCodePage: React.FC = () => {
             </div>
           )}
         </div>
+        */}
       </div>
 
       {/* Standee Centered Area - Hidden during ungenereted Dynamic mode */}
@@ -193,12 +200,14 @@ const QRCodePage: React.FC = () => {
               alignItems: 'center',
               gap: '8px' // tighter gap for all elements
             }}>
+            {/* 
             {qrType === 'Dynamic' && isDynamicGenerated && (
                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
                  <p style={{ margin: 0, fontSize: '11px', color: '#444', fontWeight: '600' }}>Amount to be Collected</p>
                  <p style={{ margin: '2px 0 0 0', fontSize: '18px', color: '#A01E35', fontWeight: '800' }}>₹ {amount}</p>
                </div>
             )}
+            */}
 
             {/* Heading Logo Zone */}
             {!(qrType === 'Dynamic' && isDynamicGenerated) && (
@@ -240,11 +249,13 @@ const QRCodePage: React.FC = () => {
             </p>
 
             {/* Dynamic state triggers differently here */}
+            {/* 
             {qrType === 'Dynamic' && isDynamicGenerated ? (
                <p style={{ fontSize: '12px', color: '#A01E35', fontWeight: '600', margin: '0 0 16px 0' }}>
                  Valid till 1:29
                </p>
             ) : (
+            */}
                <button style={{
                  backgroundColor: '#A01E35', color: 'white', padding: '10px 24px',
                  borderRadius: '4px', border: 'none', fontSize: '11px', fontWeight: '700',
@@ -252,7 +263,7 @@ const QRCodePage: React.FC = () => {
                }}>
                  Download QR Code
                </button>
-            )}
+            {/* )} */}
 
             {/* Footer Logo Prototype */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -304,7 +315,7 @@ const QRCodePage: React.FC = () => {
             <button 
               onClick={() => {
                 setShowSuccessModal(false);
-                setIsDynamicGenerated(false);
+                // setIsDynamicGenerated(false);
                 setAmount('');
               }}
               style={{
