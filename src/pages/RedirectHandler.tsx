@@ -37,7 +37,7 @@ const RedirectHandler: React.FC = () => {
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa' }}>
       <div style={{ textAlign: 'center' }}>
         <img 
-          src="https://tcyhqzciwptrulwbkuoy.supabase.co/storage/v1/object/public/SDUI_IMAGE/topbar_logo.png" 
+          src="/pnb_logo.png" 
           alt="PNB Logo" 
           style={{ height: '80px', marginBottom: '32px' }} 
         />

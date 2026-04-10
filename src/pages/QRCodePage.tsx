@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Notiflix from 'notiflix';
 import { 
   User,
   Check
@@ -17,13 +18,13 @@ const QRCodePage: React.FC = () => {
     );
   }
   const [qrType] = useState<'Static' | 'Dynamic'>('Static');
-  const [amount, setAmount] = useState('');
+  // const [amount, setAmount] = useState('');
   // const [isDynamicGenerated, setIsDynamicGenerated] = useState(false);
   const isDynamicGenerated = false;
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const [qrBase64, setQrBase64] = useState<string | null>(null);
   const [upiId, setUpiId] = useState('');
   const [merchantName, setMerchantName] = useState('MERCHANT');
@@ -61,6 +62,20 @@ const QRCodePage: React.FC = () => {
     };
     fetchQR();
   }, [staticQrString, isDynamicGenerated]);
+
+  const handleDownloadQR = () => {
+    if (!qrBase64) {
+      Notiflix.Notify.warning('QR Code not ready for download.');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${qrBase64}`;
+    link.download = `PNB_QR_${upiId || 'Merchant'}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    Notiflix.Notify.success('QR Code download started.');
+  };
 
   /*
   const handleGenerateDynamic = async () => {
@@ -256,7 +271,9 @@ const QRCodePage: React.FC = () => {
                </p>
             ) : (
             */}
-               <button style={{
+                <button 
+                  onClick={handleDownloadQR}
+                  style={{
                  backgroundColor: '#A01E35', color: 'white', padding: '10px 24px',
                  borderRadius: '4px', border: 'none', fontSize: '11px', fontWeight: '700',
                  cursor: 'pointer', marginBottom: '16px'
@@ -316,7 +333,7 @@ const QRCodePage: React.FC = () => {
               onClick={() => {
                 setShowSuccessModal(false);
                 // setIsDynamicGenerated(false);
-                setAmount('');
+                // setAmount('');
               }}
               style={{
                 width: '100%', padding: '12px', backgroundColor: '#A01E35',

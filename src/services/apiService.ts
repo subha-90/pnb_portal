@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { userManager } from './authService';
+import Notiflix from 'notiflix';
 
 // Use local proxies to solve CORS during development
 const STAGE_API_BASE = '/api-proxy';
 const STAGE_AUTH_API_BASE = '/auth-proxy';
-const CBOI_UAT_BASE = '/cboi-proxy';
+// const CBOI_UAT_BASE = '/cboi-proxy';
 const ELASTIC_API_BASE = 'https://services.txninfra.com'; // No proxy yet as no CORS issue reported
 const ENCR_BASE = '/encr-proxy';
 const ENCR_KEY = 'a6T8tOCYiSzDTrcqPvCbJfy0wSQOVcfaevH0gtwCtoU=';
@@ -75,12 +76,29 @@ const createApiInstance = (baseURL: string) => {
     return config;
   });
 
-  // Log error responses to help debug 400/401 issues
   instance.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
       if (error.response) {
-        console.error(`[apiService] Error ${error.response.status} from ${error.config.url}:`, error.response.data);
+        const { status, data } = error.response;
+        console.error(`[apiService] Error ${status} from ${error.config.url}:`, data);
+
+        // Global Error Handling
+        if (status === 401) {
+          // Token Expiry / Unauthorized
+          Notiflix.Report.warning(
+            'Session Expired',
+            'Your session has expired. Please login again to continue.',
+            'Login',
+            () => { userManager.signinRedirect(); }
+          );
+        } else {
+          // Show error from backend
+          const errorMsg = data?.status_desc || data?.statusDesc || data?.message || 'Something went wrong';
+          Notiflix.Notify.failure(errorMsg);
+        }
+      } else {
+        Notiflix.Notify.failure('Network error. Please check your connection.');
       }
       return Promise.reject(error);
     }
@@ -109,7 +127,7 @@ apiAuth.interceptors.response.use(async (response) => {
   }
   return response;
 });
-const apiCBOI = createApiInstance(CBOI_UAT_BASE);
+// const apiCBOI = createApiInstance(CBOI_UAT_BASE); // Unused until Dynamic QR is re-enabled
 const apiElastic = createApiInstance(ELASTIC_API_BASE);
 
 export const apiService = {
@@ -188,17 +206,46 @@ export const apiService = {
 
   // ─── Help & Support APIs ───────────────────────────────────────────────────
   createTicket: async (data: any) => {
-    const encrypted = await encryptData(data);
+    // Correct IDs from Zendesk PNB Documentation
+    const FIELD_SUBJECT = 900013325983;
+    const FIELD_DESCRIPTION = 900013326003;
+    const FIELD_ISSUE_TYPE = 32240028334873;
+    const FIELD_ISSUE_SUB_TYPE = 32240169914009;
+    const FORM_ID = 55401855259289;
+
+    // Use preferred_username or fallback to PNBADMIN
+    const user = await userManager.getUser();
+    const user_name = user?.profile?.preferred_username || 'PNBADMIN';
+
+    const payload = {
+      subject: data.subject,
+      body: data.body || data.description || 'No description provided',
+      ticket_form_id: FORM_ID,
+      user_name,
+      custom_fields: [
+        { id: FIELD_SUBJECT, value: data.subject },
+        { id: FIELD_DESCRIPTION, value: data.body || data.description || 'No description provided' },
+        { id: FIELD_ISSUE_TYPE, value: 'qr' }, // Hardcoded as per documentation example
+        { id: FIELD_ISSUE_SUB_TYPE, value: 'damaged_qr' }, // Hardcoded as per documentation example
+      ]
+    };
+
+    console.debug('[apiService] Creating Ticket with payload:', payload);
+    const encrypted = await encryptData(payload);
     return apiAuth.post('/pnb/helpandsupport/createTicket', { RequestData: encrypted });
   },
 
-  viewAllTickets: async (user_name: string) => {
+  viewAllTickets: async (user_name_param?: string) => {
+    const user = await userManager.getUser();
+    const user_name = user_name_param || user?.profile?.preferred_username || 'PNBADMIN';
     const encrypted = await encryptData({ user_name });
     return apiAuth.post('/pnb/helpandsupport/viewAllTickets', { RequestData: encrypted });
   },
 
   viewTicketById: async (ticket_id: number) => {
-    const encrypted = await encryptData({ ticket_id });
+    const user = await userManager.getUser();
+    const user_name = user?.profile?.preferred_username || 'PNBADMIN';
+    const encrypted = await encryptData({ ticket_id, user_name });
     return apiAuth.post('/pnb/helpandsupport/viewTicket', { RequestData: encrypted });
   },
 
@@ -208,8 +255,10 @@ export const apiService = {
   deleteFile: (file_id: string) =>
     apiAuth.post('/pnb/helpandsupport/deletefile', { file_id }),
 
-  rateUs: (data: any) =>
-    apiAuth.post('/pnb/helpandsupport/rateUs', data),
+  rateUs: async (data: any) => {
+    const encrypted = await encryptData(data);
+    return apiAuth.post('/pnb/helpandsupport/rateUs', { RequestData: encrypted });
+  },
 
   createComment: async (data: any) => {
     const encrypted = await encryptData(data);
@@ -221,23 +270,29 @@ export const apiService = {
     return apiAuth.post('/pnb/helpandsupport/showComment', { RequestData: encrypted });
   },
 
-  closeStatus: async (ticket_id: number) => {
-    const encrypted = await encryptData({ ticket_id });
+  closeStatus: async (ticket_id: number, remarks: string = 'Resolved by merchant') => {
+    const encrypted = await encryptData({ ticket_id, remarks });
     return apiAuth.post('/pnb/helpandsupport/closeStatus', { RequestData: encrypted });
   },
 
-  reOpenStatus: async (ticket_id: number) => {
-    const encrypted = await encryptData({ ticket_id });
+  reOpenStatus: async (ticket_id: number, remarks: string = 'Reopened by merchant') => {
+    const encrypted = await encryptData({ ticket_id, remarks });
     return apiAuth.post('/pnb/helpandsupport/reopenStatus', { RequestData: encrypted });
   },
 
-  filterTickets: (filters: any) =>
-    apiAuth.post('/pnb/helpandsupport/filterTickets', filters),
+  filterTickets: async (filters: any) => {
+    const encrypted = await encryptData(filters);
+    return apiAuth.post('/pnb/helpandsupport/filterTickets', { RequestData: encrypted });
+  },
 
-  downloadAllTickets: () =>
-    apiAuth.post('/pnb/helpandsupport/download', {}),
+  downloadAllTickets: async () => {
+    const encrypted = await encryptData({});
+    return apiAuth.post('/pnb/helpandsupport/download', { RequestData: encrypted }, { responseType: 'blob' });
+  },
 
-  downloadTicketById: (ticket_id: number) =>
-    apiAuth.post('/pnb/helpandsupport/downloadByID', { ticket_id }),
+  downloadTicketById: async (ticket_id: number) => {
+    const encrypted = await encryptData({ ticket_id });
+    return apiAuth.post('/pnb/helpandsupport/downloadByTicketId', { RequestData: encrypted }, { responseType: 'blob' });
+  },
 };
 

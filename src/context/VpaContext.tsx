@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { apiService } from '../services/apiService';
-import { userManager } from '../services/authService';
+// import { userManager } from '../services/authService';
+import { useAuth } from './AuthContext';
 
 interface VpaDetails {
   vpa_id: string;
@@ -33,15 +34,19 @@ const VpaContext = createContext<VpaContextType | undefined>(undefined);
 export const VpaProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [vpaList, setVpaList] = useState<VpaDetails[]>([]);
   const [selectedVpa, setSelectedVpaState] = useState<VpaDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchVpas = async (force: boolean = false) => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     if (!force && vpaList.length > 0) return; 
     setLoading(true);
     setError(null);
     try {
-      const user = await userManager.getUser();
       const userName = user?.profile?.preferred_username || 'PNBADMIN';
       
       const res = await apiService.fetchUserById({ user_name: userName });
@@ -72,8 +77,13 @@ export const VpaProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
 
   useEffect(() => {
-    fetchVpas();
-  }, []);
+    if (user) {
+      fetchVpas();
+    } else {
+      setVpaList([]);
+      setSelectedVpaState(null);
+    }
+  }, [user]);
 
   const setSelectedVpa = (vpa: VpaDetails) => {
     setSelectedVpaState(vpa);

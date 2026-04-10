@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Notiflix from 'notiflix';
 import { 
   Phone, 
   Mail, 
@@ -52,19 +53,26 @@ const Support: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      Notiflix.Loading.standard('Creating ticket...');
       await apiService.createTicket({
         subject: newTicket.subject,
         body: newTicket.body,
-        ticket_form_id: 12345,
-        custom_fields: []
+        category: newTicket.category
       });
       setIsModalOpen(false);
       setNewTicket({ subject: '', body: '', category: 'Technical' });
-      fetchTickets();
+      
+      // Delay fetch to allow backend indexing (Zendesk latency)
+      setTimeout(() => {
+        fetchTickets();
+      }, 1500);
+
+      Notiflix.Notify.success('Ticket created successfully!');
     } catch (err) {
       console.error('Create Ticket Error:', err);
     } finally {
       setSubmitting(false);
+      Notiflix.Loading.remove();
     }
   };
 
@@ -89,14 +97,18 @@ const Support: React.FC = () => {
     e.preventDefault();
     if (!newComment || !selectedTicket) return;
     try {
+      Notiflix.Loading.dots('Adding comment...');
       await apiService.createComment({
         ticket_id: selectedTicket.id,
         body: newComment
       });
       setNewComment('');
       fetchTicketDetails(selectedTicket.id);
+      Notiflix.Notify.success('Comment added successfully!');
     } catch (err) {
       console.error('Comment Error:', err);
+    } finally {
+      Notiflix.Loading.remove();
     }
   };
 
@@ -104,29 +116,43 @@ const Support: React.FC = () => {
     if (!selectedTicket) return;
     try {
       if (selectedTicket.status === 'solved') {
-        await apiService.reOpenStatus(selectedTicket.id);
+        Notiflix.Loading.pulse('Reopening ticket...');
+        await apiService.reOpenStatus(selectedTicket.id, 'Reopened for further investigation');
+        Notiflix.Notify.success('Ticket reopened successfully!');
       } else {
-        await apiService.closeStatus(selectedTicket.id);
+        Notiflix.Loading.pulse('Closing ticket...');
+        await apiService.closeStatus(selectedTicket.id, 'Issue resolved by merchant');
+        Notiflix.Notify.success('Ticket closed successfully!');
       }
       fetchTicketDetails(selectedTicket.id);
     } catch (err) {
       console.error('Status Error:', err);
+    } finally {
+      Notiflix.Loading.remove();
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch(status?.toLowerCase()) {
+      case 'new': return <AlertCircle size={14} color="#ef4444" />;
       case 'open': return <Clock size={14} color="#f59e0b" />;
-      case 'solved': return <CheckCircle2 size={14} color="#10b981" />;
-      default: return <AlertCircle size={14} color="#ef4444" />;
+      case 'pending': return <Clock size={14} color="#3b82f6" />;
+      case 'solved': 
+      case 'closed':
+        return <CheckCircle2 size={14} color="#10b981" />;
+      default: return <AlertCircle size={14} color="#666" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch(status?.toLowerCase()) {
+      case 'new': return '#fef2f2';
       case 'open': return '#fff7ed';
-      case 'solved': return '#ecfdf5';
-      default: return '#fef2f2';
+      case 'pending': return '#eff6ff';
+      case 'solved':
+      case 'closed': 
+        return '#ecfdf5';
+      default: return '#f8f9fa';
     }
   };
 
@@ -222,7 +248,25 @@ const Support: React.FC = () => {
                 </button>
                 <button 
                   style={{ width: '100%', padding: '10px', backgroundColor: '#f8f9fa', border: '1px solid #eee', borderRadius: '4px', color: '#666', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                  onClick={() => apiService.downloadTicketById(selectedTicket.id)}
+                  onClick={async () => {
+                    try {
+                      Notiflix.Loading.standard('Downloading PDF...');
+                      const res = await apiService.downloadTicketById(selectedTicket.id);
+                      // Since apiService returns blob for this, we handle download
+                      const url = window.URL.createObjectURL(new Blob([res.data]));
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `Ticket_${selectedTicket.id}.pdf`);
+                      document.body.appendChild(link);
+                      link.click();
+                      window.URL.revokeObjectURL(url);
+                      Notiflix.Notify.info('Download started.');
+                    } catch (err) {
+                      console.error('Download failed:', err);
+                    } finally {
+                      Notiflix.Loading.remove();
+                    }
+                  }}
                 >
                   <Download size={14} /> Download PDF
                 </button>
@@ -276,37 +320,50 @@ const Support: React.FC = () => {
               </button>
             </div>
             <div style={{ minHeight: '300px' }}>
-              {loading ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#888', fontSize: '13px' }}>Loading tickets...</div>
-              ) : tickets.length > 0 ? (
-                tickets.map((ticket, i) => (
-                  <div 
-                    key={ticket.id || i}
-                    onClick={() => { setSelectedTicket(ticket); fetchTicketDetails(ticket.id); }}
-                    style={{ padding: '16px 24px', borderBottom: i === tickets.length - 1 ? 'none' : '1px solid #f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <div>
-                      <h5 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '700', color: '#1A1A1A' }}>{ticket.subject || 'No Subject'}</h5>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '11px', color: '#888' }}>ID: #{ticket.id}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#666' }}>
-                          {getStatusIcon(ticket.status)}
-                          {ticket.status}
+              {(() => {
+                const filteredTickets = tickets.filter(t => 
+                  (t.subject?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                  (t.id?.toString() || '').includes(searchQuery)
+                );
+
+                if (loading) {
+                  return <div style={{ padding: '40px', textAlign: 'center', color: '#888', fontSize: '13px' }}>Loading tickets...</div>;
+                }
+
+                if (filteredTickets.length > 0) {
+                  return filteredTickets.map((ticket, i) => (
+                    <div 
+                      key={ticket.id || i}
+                      onClick={() => { setSelectedTicket(ticket); fetchTicketDetails(ticket.id); }}
+                      style={{ padding: '16px 24px', borderBottom: i === filteredTickets.length - 1 ? 'none' : '1px solid #f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fafafa'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div>
+                        <h5 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '700', color: '#1A1A1A' }}>{ticket.subject || 'No Subject'}</h5>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '11px', color: '#888' }}>ID: #{ticket.id}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#666' }}>
+                            {getStatusIcon(ticket.status)}
+                            {ticket.status}
+                          </div>
                         </div>
                       </div>
+                      <ArrowRight size={14} color="#ccc" />
                     </div>
-                    <ArrowRight size={14} color="#ccc" />
+                  ));
+                }
+
+                return (
+                  <div style={{ padding: '80px 40px', textAlign: 'center' }}>
+                    <LifeBuoy size={40} color="#eee" style={{ marginBottom: '16px' }} />
+                    <p style={{ margin: 0, fontSize: '13px', color: '#888' }}>
+                      {searchQuery ? `No tickets matching "${searchQuery}"` : "No support tickets found."}
+                    </p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#aaa' }}>Reach out to us to start a conversation.</p>
                   </div>
-                ))
-              ) : (
-                <div style={{ padding: '80px 40px', textAlign: 'center' }}>
-                  <LifeBuoy size={40} color="#eee" style={{ marginBottom: '16px' }} />
-                  <p style={{ margin: 0, fontSize: '13px', color: '#888' }}>No support tickets found.</p>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#aaa' }}>Reach out to us to start a conversation.</p>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </section>
 

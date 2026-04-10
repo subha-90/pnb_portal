@@ -9,6 +9,7 @@ import Reports from './pages/Reports.tsx';
 import Soundbox from './pages/Soundbox.tsx';
 import QRCodePage from './pages/QRCodePage.tsx';
 import Support from './pages/Support.tsx';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -38,46 +39,49 @@ import { VpaProvider } from './context/VpaContext.tsx';
 function App() {
   return (
     <Router>
-      <VpaProvider>
+      <ErrorBoundary>
         <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/redirected" element={<RedirectHandler />} />
-            
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
+          <VpaProvider>
+            <Routes>
+              {/* ... routes ... */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/redirected" element={<RedirectHandler />} />
+              
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
 
-            <Route path="/reports" element={
-              <ProtectedRoute>
-                <Reports />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/soundbox" element={
-              <ProtectedRoute>
-                <Soundbox />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/qr" element={
-              <ProtectedRoute>
-                <QRCodePage />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/support" element={
-              <ProtectedRoute>
-                <Support />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              <Route path="/reports" element={
+                <ProtectedRoute>
+                  <Reports />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/soundbox" element={
+                <ProtectedRoute>
+                  <Soundbox />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/qr" element={
+                <ProtectedRoute>
+                  <QRCodePage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/support" element={
+                <ProtectedRoute>
+                  <Support />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </VpaProvider>
         </AuthProvider>
-      </VpaProvider>
+      </ErrorBoundary>
     </Router>
   );
 }
